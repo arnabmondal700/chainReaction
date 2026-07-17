@@ -33,6 +33,9 @@ chain-reaction/
 │
 ├── build.js                BUILD — Node.js concat script → dist/index.html
 │
+├── audio/                  ASSETS — Web Audio sound effect files (place, explode,
+│                           win, invalid, click)
+│
 ├── .clinerules/
 │   ├── RULES.md            DOC — Development rules & conventions (ADRs, style)
 │   └── MEMORY.md           DOC — This file (architecture memory bank)
@@ -55,6 +58,8 @@ rules.js      (constants.js, state.js)
 render.js     (constants.js, state.js, rules.js)
      ↓
 ui.js         (constants.js, state.js, rules.js, render.js)
+     ↓
+sound.js      (no deps from app modules; fetches audio files)
      ↓
 main.js       (all of the above)
 ```

@@ -28,6 +28,7 @@ const JS_MODULES = [
   'state.js',
   'rules.js',
   'render.js',
+  'sound.js',
   'ui.js',
   'cpu.js',
   'main.js',
@@ -45,10 +46,12 @@ function read(filePath) {
  * concatenated into a single IIFE.
  */
 function stripModuleSyntax(code) {
-  return code
-    .replace(/^import\s+[\s\S]*?from\s+['"][^'"]*['"]\s*;?\s*$/gm, '')
-    .replace(/^export\s+/gm, '')
-    .trim();
+  // Replace the sound.js namespace import with a reference to the shared global
+  code = code.replace(/^import\s+\*\s+as\s+Sound\s+from\s+['"]\.\/sound\.js['"]\s*;?\s*$/gm, 'const Sound = window.Sound;');
+  // Strip remaining imports
+  code = code.replace(/^import\s+[\s\S]*?from\s+['"][^'"]*['"]\s*;?\s*$/gm, '');
+  code = code.replace(/^export\s+/gm, '');
+  return code.trim();
 }
 
 /**
@@ -76,11 +79,16 @@ async function build() {
 
   // Inline JS: find <script type="module" src="js/main.js"></script>
   // and replace with concatenated IIFE-wrapped script
-  const moduleSources = JS_MODULES.map((mod) => {
+  const moduleSources = [];
+  for (const mod of JS_MODULES) {
     const fullPath = path.join(ROOT, 'js', mod);
-    const code = read(fullPath);
-    return stripModuleSyntax(code);
-  });
+    let code = read(fullPath);
+    code = stripModuleSyntax(code);
+    if (mod === 'sound.js') {
+      code += '\n\nwindow.Sound = { unlock, play, isMuted, setMuted, toggleMute, playExplosionBurst };';
+    }
+    moduleSources.push(code);
+  }
 
   const combinedJS = moduleSources.join('\n\n');
   let wrappedJS = wrapIIFE(combinedJS);
@@ -130,6 +138,13 @@ async function build() {
       minifyCSS: false,
       minifyJS: false,
     });
+  }
+
+  // Copy static audio assets to dist/
+  const AUDIO_SRC = path.join(ROOT, 'audio');
+  const AUDIO_DEST = path.join(DIST, 'audio');
+  if (fs.existsSync(AUDIO_SRC)) {
+    fs.cpSync(AUDIO_SRC, AUDIO_DEST, { recursive: true });
   }
 
   // Write dist/index.html

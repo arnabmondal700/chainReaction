@@ -25,10 +25,12 @@ import {
   setThinking,
 } from './render.js';
 import { executeCpuMove } from './cpu.js';
+import * as Sound from './sound.js';
 
 // ---- DOM refs (populated by initUI) ----
 let gameOverOverlay, winnerText, rulesOverlay;
 let newGameBtn, rematchBtn, howToPlayBtn, closeRulesBtn, closeRulesBtn2;
+let muteBtn;
 let playerBtns = [];
 
 /**
@@ -45,6 +47,7 @@ function showGameOver(winner) {
   winnerText.textContent = `${winner.name} wins!`;
   winnerText.style.color = winner.color;
   gameOverOverlay.classList.remove('hidden');
+  Sound.play('win');
 }
 
 /**
@@ -97,6 +100,7 @@ async function resolveExplosions() {
       triggerShockwave(r, c, color);
       triggerJump(r, c);
     });
+    Sound.playExplosionBurst(overflowing.length);
     renderDirty();
     await sleep(WAVE_DELAY);
 
@@ -119,7 +123,10 @@ export async function handleCellClick(r, c, skipCpuCheck = false) {
   if (gameOver || busy) return;
   if (!skipCpuCheck && isCpuTurn()) return;
   const cell = getCell(r, c);
-  if (!canPlace(r, c, currentPlayerIndex)) return;
+  if (!canPlace(r, c, currentPlayerIndex)) {
+    Sound.play('invalid');
+    return;
+  }
 
   setBusy(true);
   cell.count += 1;
@@ -127,6 +134,7 @@ export async function handleCellClick(r, c, skipCpuCheck = false) {
   hasMoved[currentPlayerIndex] = true;
   clearOrbCountCache();
   markDirty(r, c);
+  Sound.play('place');
   renderDirty();
 
   await sleep(PLACE_DELAY);
@@ -188,11 +196,20 @@ export function initUI() {
   howToPlayBtn = document.getElementById('howToPlayBtn');
   closeRulesBtn = document.getElementById('closeRulesBtn');
   closeRulesBtn2 = document.getElementById('closeRulesBtn2');
+  muteBtn = document.getElementById('muteBtn');
   playerBtns = Array.from(document.querySelectorAll('.player-btn'));
+
+  function syncMuteBtn() {
+    const muted = Sound.isMuted();
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.setAttribute('aria-pressed', String(muted));
+  }
+  syncMuteBtn();
 
   // Board click + keyboard
   const boardEl = document.getElementById('board');
   boardEl.addEventListener('click', (e) => {
+    Sound.unlock();
     const cellEl = e.target.closest('.cell');
     if (!cellEl) return;
     handleCellClick(Number(cellEl.dataset.row), Number(cellEl.dataset.col));
@@ -200,6 +217,7 @@ export function initUI() {
 
   boardEl.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    Sound.unlock();
     const cellEl = e.target.closest('.cell');
     if (!cellEl) return;
     e.preventDefault();
@@ -208,22 +226,47 @@ export function initUI() {
 
   // Player count buttons
   playerBtns.forEach(btn => {
-    btn.addEventListener('click', () => initGame(Number(btn.dataset.players)));
+    btn.addEventListener('click', () => {
+      Sound.unlock();
+      Sound.play('click');
+      initGame(Number(btn.dataset.players));
+    });
   });
 
   // New game / rematch
-  newGameBtn.addEventListener('click', () => initGame(numPlayers));
-  rematchBtn.addEventListener('click', () => initGame(numPlayers));
+  newGameBtn.addEventListener('click', () => {
+    Sound.unlock();
+    Sound.play('click');
+    initGame(numPlayers);
+  });
+  rematchBtn.addEventListener('click', () => {
+    Sound.unlock();
+    Sound.play('click');
+    initGame(numPlayers);
+  });
 
   // How to play overlay
   howToPlayBtn.addEventListener('click', () => {
+    Sound.unlock();
+    Sound.play('click');
     rulesOverlay.classList.remove('hidden');
   });
   closeRulesBtn.addEventListener('click', () => {
+    Sound.unlock();
+    Sound.play('click');
     rulesOverlay.classList.add('hidden');
   });
   closeRulesBtn2.addEventListener('click', () => {
+    Sound.unlock();
+    Sound.play('click');
     rulesOverlay.classList.add('hidden');
+  });
+
+  // Mute toggle
+  muteBtn.addEventListener('click', () => {
+    Sound.unlock();
+    Sound.toggleMute();
+    syncMuteBtn();
   });
 
   // Escape key closes overlays
