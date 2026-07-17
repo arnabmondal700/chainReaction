@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0d13" />
+<title>Chain Reaction</title>
+<meta name="description" content="A browser-based Chain Reaction strategy game — trigger cascading explosions to capture the entire board." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span> Chain Reaction</div>
+    <div class="player-select" role="group" aria-label="Number of players">
+      <button class="player-btn active" data-players="2">2P</button>
+      <button class="player-btn" data-players="3">3P</button>
+      <button class="player-btn" data-players="4">4P</button>
+    </div>
+    <button class="ghost-btn" id="howToPlayBtn">How to Play</button>
+  </header>
+
+  <main class="stage">
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <aside class="side-rail">
+      <div class="panel turn-panel">
+        <div class="turn-label">Current turn</div>
+        <div class="turn-indicator" id="turnIndicator"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Players</div>
+        <div class="players-list" id="playersList"></div>
+      </div>
+      <button class="primary-btn" id="newGameBtn">New Game</button>
+    </aside>
+  </main>
+</div>
+
+<div class="overlay hidden" id="gameOverOverlay">
+  <div class="overlay-card">
+    <div class="overlay-eyebrow">Reactor Critical</div>
+    <h2 id="winnerText">Player wins</h2>
+    <button class="primary-btn" id="rematchBtn">Play Again</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="rulesOverlay">
+  <div class="overlay-card rules-card">
+    <button class="close-btn" id="closeRulesBtn" aria-label="Close">&times;</button>
+    <h2>How to Play</h2>
+    <ol>
+      <li>Take turns placing an orb in any empty cell, or any cell you already own.</li>
+      <li>Each cell can hold up to its <strong>capacity</strong> — 2 orbs in a corner, 3 on an edge, 4 in the interior.</li>
+      <li>Reach capacity and the cell <strong>explodes</strong>, sending one orb to each neighboring cell and capturing them.</li>
+      <li>Captured cells can explode too, chaining across the board.</li>
+      <li>Own every orb on the board to win.</li>
+    </ol>
+    <h3>Strategy Tips</h3>
+    <ul>
+      <li>Corners and edges explode fast (2–3 orbs) — cheap but exposed.</li>
+      <li>Interior cells hold more orbs and can trigger the biggest chains.</li>
+      <li>Cells one orb from exploding pulse gently — treat them as live threats.</li>
+      <li>Don't stack orbs next to a strong opponent cluster; one move can flip it all.</li>
+    </ul>
+    <button class="primary-btn" id="closeRulesBtn2">Got it</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
