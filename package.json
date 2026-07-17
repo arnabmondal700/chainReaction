@@ -1,0 +1,19 @@
+{
+  "name": "chainreaction-master",
+  "version": "1.0.0",
+  "description": "A turn-based strategy game built with vanilla HTML, CSS, and JavaScript — zero frameworks, zero dependencies.",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js",
+    "build:min": "node build.js --minify",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "clean-css": "^5.3.3",
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.49.0"
+  }
+}
