@@ -40,6 +40,14 @@ node build.js
 
 Output: `dist/index.html` — a single self-contained deployable file.
 
+### Minified production build
+
+```bash
+node build.js --minify
+```
+
+Output: `dist/index.html` — minified single file with optimized CSS and JS for smaller file size.
+
 ---
 
 ## 🎯 How to Play
@@ -87,6 +95,7 @@ chain-reaction/
 │   ├── rules.js         # Pure game logic (zero DOM references)
 │   ├── render.js        # DOM rendering (board, cells, panels)
 │   ├── ui.js            # Interaction handlers, chain reaction loop
+│   ├── cpu.js           # AI opponent logic (future use)
 │   └── main.js          # Entry point, bootstraps and wires events
 ├── build.js             # Node.js concat script → dist/index.html
 ├── dist/                # Build output (single self-contained index.html)

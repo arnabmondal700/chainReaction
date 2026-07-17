@@ -26,6 +26,7 @@ chain-reaction/
 │   ├── rules.js            MODULE — Pure game logic (capacity, explosions, win)
 │   ├── render.js           MODULE — DOM rendering (board, cells, panels)
 │   ├── ui.js               MODULE — Interaction handlers, chain reaction loop
+│   ├── cpu.js              MODULE — AI opponent logic (reserved for future use)
 │   └── main.js             MODULE — Entry point, bootstraps and wires events
 │
 ├── build.js                BUILD — Node.js concat script → dist/index.html
@@ -47,6 +48,8 @@ rules.js      (constants.js, state.js)
 render.js     (constants.js, state.js, rules.js)
      ↓
 ui.js         (constants.js, state.js, rules.js, render.js)
+     ↓
+cpu.js        (constants.js, state.js, rules.js)
      ↓
 main.js       (all of the above)
 ```
@@ -234,12 +237,21 @@ node build.js
 Output: `dist/index.html` — single self-contained file (CSS inlined, JS
 concatenated and wrapped in IIFE).
 
-### 8.3 Build Script Logic
+### 8.3 Minified Production Build
+
+```bash
+node build.js --minify
+```
+
+Output: `dist/index.html` — minified single file with optimized CSS and JS
+for smaller file size.
+
+### 8.4 Build Script Logic
 
 ```
 1. Read index.html → parse out <style> placeholder comment and <script> placeholder
 2. Read css/styles.css → inline into <style> block
-3. Read js/ in dependency order (constants → state → rules → render → ui → main)
+3. Read js/ in dependency order (constants → state → rules → render → ui → cpu → main)
    → concatenate into single <script> block wrapped in IIFE
 4. Write dist/index.html
 ```
