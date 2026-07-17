@@ -8,6 +8,8 @@ import {
   currentPlayerIndex, hasMoved, gameOver, busy,
   getCell, setBusy, clearOrbCountCache,
   initGameState, resetBoardState,
+  setPlayerTypes, playerTypes, cpuDifficulty,
+  isCpuTurn,
   markDirty,
 } from './state.js';
 import {
@@ -20,7 +22,9 @@ import {
   renderDirty,
   triggerShockwave,
   triggerJump,
+  setThinking,
 } from './render.js';
+import { executeCpuMove } from './cpu.js';
 
 // ---- DOM refs (populated by initUI) ----
 let gameOverOverlay, winnerText, rulesOverlay;
@@ -49,6 +53,32 @@ function showGameOver(winner) {
 function hideGameOver() {
   gameOverOverlay.classList.add('hidden');
 }
+
+// ------- CPU turn -------
+
+let cpuTimer = null;
+function scheduleCpuMove() {
+  clearTimeout(cpuTimer);
+  setThinking(true);
+  const delay = 500 + Math.random() * 400;
+  cpuTimer = setTimeout(() => executeCpuMove(), delay);
+  // Safety: clear thinking if CPU bubbles for any reason
+  cpuTimer = setTimeout(() => setThinking(false), delay + 5000);
+}
+
+// Listen for CPU move events dispatched by cpu.js
+window.addEventListener('cpu-move', (e) => {
+  const { r, c } = e.detail;
+  setThinking(false);
+  if (gameOver) return;
+  try {
+    handleCellClick(r, c, true);
+  } catch (err) {
+    console.error('CPU move failed:', err);
+    setThinking(false);
+    setBusy(false);
+  }
+});
 
 // ------- Explosion chain (async) -------
 
@@ -85,8 +115,9 @@ async function resolveExplosions() {
 /**
  * Handle a cell click or keyboard activation.
  */
-export async function handleCellClick(r, c) {
+export async function handleCellClick(r, c, skipCpuCheck = false) {
   if (gameOver || busy) return;
+  if (!skipCpuCheck && isCpuTurn()) return;
   const cell = getCell(r, c);
   if (!canPlace(r, c, currentPlayerIndex)) return;
 
@@ -104,6 +135,9 @@ export async function handleCellClick(r, c) {
   if (!gameOver) {
     advanceTurn();
     renderTurnChange();
+    if (isCpuTurn()) {
+      scheduleCpuMove();
+    }
   }
   setBusy(false);
 }
@@ -123,6 +157,10 @@ export function initGame(n) {
   } else {
     resetBoardState();
   }
+
+  // Cancel any pending CPU move
+  clearTimeout(cpuTimer);
+  setThinking(false);
 
   hideGameOver();
   renderAll();

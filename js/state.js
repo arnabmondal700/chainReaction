@@ -13,6 +13,10 @@ export let hasMoved = [];
 export let gameOver = false;
 export let busy = false;
 
+// CPU vs Player
+export let playerTypes = [];
+export let cpuDifficulty = 'medium';
+
 /** Cached per-player orb counts, recomputed each render. */
 let orbCountCache = {};
 
@@ -129,5 +133,17 @@ export function setGameOver(val) {
 /** Set the current player index (advance turn). */
 export function setCurrentPlayerIndex(index) {
   currentPlayerIndex = index;
+}
+
+export function setPlayerTypes(types) {
+  playerTypes = types;
+}
+
+export function setCpuDifficulty(level) {
+  cpuDifficulty = level;
+}
+
+export function isCpuTurn() {
+  return playerTypes[currentPlayerIndex] === 'cpu';
 }
 

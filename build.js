@@ -22,6 +22,7 @@ const JS_MODULES = [
   'rules.js',
   'render.js',
   'ui.js',
+  'cpu.js',
   'main.js',
 ];
 
@@ -38,7 +39,7 @@ function read(filePath) {
  */
 function stripModuleSyntax(code) {
   return code
-    .replace(/^import\s+.*?from\s+['"].*?['"]\s*;?\s*$/gm, '')
+    .replace(/^import\s+[\s\S]*?from\s+['"][^'"]*['"]\s*;?\s*$/gm, '')
     .replace(/^export\s+/gm, '')
     .trim();
 }

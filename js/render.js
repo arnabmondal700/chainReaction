@@ -16,6 +16,7 @@ let boardEl = null;
 let cellEls = [];
 let playersListEl = null;
 let turnIndicatorEl = null;
+let thinkingEl = null;
 
 /**
  * Cache DOM element references.
@@ -24,6 +25,7 @@ export function cacheDom() {
   boardEl = document.getElementById('board');
   playersListEl = document.getElementById('playersList');
   turnIndicatorEl = document.getElementById('turnIndicator');
+  thinkingEl = document.getElementById('thinkingIndicator');
 }
 
 /**
@@ -171,6 +173,11 @@ export function renderTurnIndicator() {
   turnIndicatorEl.innerHTML =
     `<span class="turn-dot" style="background:${p.color}; box-shadow:0 0 10px ${p.color}"></span>` +
     `${p.name}'s turn`;
+}
+
+export function setThinking(show) {
+  if (!thinkingEl) return;
+  thinkingEl.classList.toggle('hidden', !show);
 }
 
 /**

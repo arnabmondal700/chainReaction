@@ -136,6 +136,11 @@ button:focus-visible,
   color: var(--text-primary);
   box-shadow: inset 0 0 0 1px var(--border-glass);
 }
+.player-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .ghost-btn {
   appearance: none;
@@ -155,6 +160,50 @@ button:focus-visible,
 }
 .ghost-btn:active {
   transform: scale(0.97);
+}
+
+.mode-select {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.mode-select select {
+  appearance: none;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 36px 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.9) 50%), linear-gradient(135deg, rgba(255,255,255,0.9) 50%, transparent 50%);
+  background-position: calc(100% - 12px) 55%, calc(100% - 8px) 55%;
+  background-size: 7px 7px, 7px 7px;
+  background-repeat: no-repeat;
+  transition: background .15s ease, border-color .15s ease;
+  min-width: 160px;
+}
+.mode-select select:hover {
+  background-color: var(--bg-panel-strong);
+  border-color: rgba(255,255,255,0.22);
+}
+.mode-select select:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Dropdown options readability */
+.mode-select select option {
+  background: #1a1d27;
+  color: var(--text-primary);
+  padding: 10px 14px;
+}
+.mode-select select option:checked,
+.mode-select select option:hover {
+  background: #252a38;
+  color: #fff;
 }
 
 .primary-btn {
@@ -358,6 +407,18 @@ button:focus-visible,
   height: 12px;
   border-radius: 50%;
   flex: none;
+}
+
+.thinking {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.thinking.hidden {
+  display: none;
 }
 
 /* ---- Player List ---- */

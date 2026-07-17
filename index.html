@@ -21,6 +21,17 @@
       <button class="player-btn" data-players="3">3P</button>
       <button class="player-btn" data-players="4">4P</button>
     </div>
+    <div class="mode-select" role="group" aria-label="Game mode">
+      <select id="gameMode">
+        <option value="pvp">Player vs Player</option>
+        <option value="cpu">Player vs CPU</option>
+      </select>
+      <select id="cpuDifficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
     <button class="ghost-btn" id="howToPlayBtn">How to Play</button>
   </header>
 
@@ -33,6 +44,7 @@
       <div class="panel turn-panel">
         <div class="turn-label">Current turn</div>
         <div class="turn-indicator" id="turnIndicator"></div>
+        <div class="thinking hidden" id="thinkingIndicator">CPU is thinking...</div>
       </div>
       <div class="panel">
         <div class="panel-title">Players</div>
