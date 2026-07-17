@@ -46,8 +46,9 @@ function read(filePath) {
  * concatenated into a single IIFE.
  */
 function stripModuleSyntax(code) {
-  // Replace the sound.js namespace import with a reference to the shared global
-  code = code.replace(/^import\s+\*\s+as\s+Sound\s+from\s+['"]\.\/sound\.js['"]\s*;?\s*$/gm, 'const Sound = window.Sound;');
+  // Replace the sound.js namespace import with a reference to the shared global.
+  // Using var allows multiple concatenated modules to share the same binding.
+  code = code.replace(/^import\s+\*\s+as\s+Sound\s+from\s+['"]\.\/sound\.js['"]\s*;?\s*$/gm, 'var Sound = window.Sound;');
   // Strip remaining imports
   code = code.replace(/^import\s+[\s\S]*?from\s+['"][^'"]*['"]\s*;?\s*$/gm, '');
   code = code.replace(/^export\s+/gm, '');
@@ -85,7 +86,7 @@ async function build() {
     let code = read(fullPath);
     code = stripModuleSyntax(code);
     if (mod === 'sound.js') {
-      code += '\n\nwindow.Sound = { unlock, play, isMuted, setMuted, toggleMute, playExplosionBurst };';
+      code += '\n\nwindow.Sound = { unlock, play, isMuted, setMuted, toggleMute, playExplosionBurst, preload };';
     }
     moduleSources.push(code);
   }

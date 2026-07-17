@@ -15,6 +15,7 @@ let audioCtx = null;
 let masterGain = null;
 const buffers = new Map();   // name -> AudioBuffer
 let loaded = false;
+let loadPromise = null;
 let muted = readStoredMute();
 
 function readStoredMute() {
@@ -59,6 +60,20 @@ function loadArrayBuffer(url) {
   });
 }
 
+function ensureLoading() {
+  const ctx = ensureContext();
+  if (!ctx) return null;
+  if (!loadPromise) {
+    loaded = true;
+    loadPromise = loadAll(ctx);
+  }
+  return loadPromise;
+}
+
+export function preload() {
+  return ensureLoading();
+}
+
 export function unlock() {
   const ctx = ensureContext();
   if (!ctx) return;
@@ -66,12 +81,7 @@ export function unlock() {
   if (ctx.state === 'suspended') {
     ctx.resume().catch(() => {});
   }
-  if (!loaded) {
-    loaded = true;
-    loadAll(ctx);
-  } else {
-    console.info('sound.js: unlock() called, already loaded');
-  }
+  ensureLoading();
 }
 
 async function loadAll(ctx) {
