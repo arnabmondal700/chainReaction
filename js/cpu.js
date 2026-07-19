@@ -4,11 +4,13 @@
 
 import { ROWS, COLS } from './constants.js';
 import {
-  board, players, numPlayers, currentPlayerIndex,
-  getCell, getCapacity, getNeighbors,
+  getCapacity, getNeighbors,
   collectOverflowing, explodeCell, canPlace,
 } from './rules.js';
-import { isCpuTurn, cpuDifficulty } from './state.js';
+import {
+  board, players, numPlayers, currentPlayerIndex, getCell,
+  isCpuTurn, cpuDifficulty, hasMoved,
+} from './state.js';
 
 // ---- Fix 5: Safety valve for chain resolution ----
 const MAX_CHAIN_STEPS = 200;
@@ -104,24 +106,32 @@ function scoreMove(r, c) {
   const cap = getCapacity(r, c);
   let score = 0;
 
-  // If capturing an opponent cell, bonus
-  if (cell.owner !== null && cell.owner !== me) {
-    score += 100;
-  }
-
   // If reinforcing own cell, small bonus
   if (cell.owner === me) {
     score += 20;
   }
 
-  // Proximity to critical cells
+  // If THIS move itself would explode (capturing/affecting neighbors right now),
+  // that's a real, immediate tactical event — weight it far above mere proximity.
   const neighbors = getNeighbors(r, c);
+  const wouldExplode = (cell.count + 1) >= cap;
+  if (wouldExplode) {
+    score += 150;
+    // Count how many enemy-owned neighbors this explosion would capture
+    const capturedNeighbors = neighbors.filter(([nr, nc]) => {
+      const n = getCell(nr, nc);
+      return n.owner !== null && n.owner !== me;
+    }).length;
+    score += capturedNeighbors * 60;
+  }
+
+  // Proximity to critical cells
   for (const [nr, nc] of neighbors) {
     const n = getCell(nr, nc);
     const nCap = getCapacity(nr, nc);
-    // enemy critical => high value to capture
+    // enemy critical => high value to capture (but less if we're just near it)
     if (n.owner !== null && n.owner !== me && n.count === nCap - 1) {
-      score += 80;
+      score += wouldExplode ? 80 : 25;   // proximity alone is worth much less
     }
     // own critical => defend
     if (n.owner === me && n.count === nCap - 1) {
@@ -129,19 +139,24 @@ function scoreMove(r, c) {
     }
   }
 
-  // Avoid cells adjacent to strong enemy clusters
+  // Root cause 1: Avoid cells adjacent to strong enemy clusters — use the SAME "critical"
+  // definition as the capture-opportunity check above, so this actually
+  // fires for corner/edge cells too, not just interior ones.
+  // Corners/edges are cheaper to threaten from than interior cells (fewer
+  // orbs needed to reach critical), so weight caution inversely to capacity.
   for (const [nr, nc] of neighbors) {
     const n = getCell(nr, nc);
-    if (n.owner !== null && n.owner !== me && n.count >= Math.max(2, Math.floor(getCapacity(nr, nc) / 2))) {
-      score -= 30;
+    const nCap = getCapacity(nr, nc);
+    if (n.owner !== null && n.owner !== me && n.count >= nCap - 1) {
+      score -= 30 + (4 - nCap) * 10;   // corner: -50, edge: -40, interior: -30
     }
   }
 
-  // Prefer center-ish cells for more expansion options
+  // Root cause 3: Prefer center-ish cells for more expansion options (minor tie-breaker only)
   const centerR = Math.floor(ROWS / 2);
   const centerC = Math.floor(COLS / 2);
   const dist = Math.abs(r - centerR) + Math.abs(c - centerC);
-  score -= dist * 1;
+  score -= dist * 0.15;
 
   // Tiny random jitter to break ties
   score += Math.random() * 2;
@@ -150,15 +165,19 @@ function scoreMove(r, c) {
 }
 
 /**
- * Simple minimax with alpha-beta pruning.
- * Depth is adaptive: 2 on mobile, 3 elsewhere.
+ * Iterative-deepening minimax with alpha-beta pruning.
+ * Every candidate gets at least a depth-1 look before any gets deeper,
+ * preventing time-outs from ignoring whole subsets of candidates.
  */
 // Fix 1: Time-boxed search to prevent UI freezes
 function pickMinimax(moves, budgetMs = 300) {
   const deadline = performance.now() + budgetMs;
-  const depth = getMinimaxDepth();
+  const occupancyRatio = computeOccupancy(board);
+  const maxDepth = getMinimaxDepth(occupancyRatio);
   // Fix 2b: Cap branching factor — only consider top-K candidates
-  const kMoves = topCandidateMoves(moves, 8);
+  // Enhancement 5: Widen the candidate pool in the opening (sparse board) for better tactical awareness
+  const k = occupancyRatio < 0.15 ? 14 : 8;
+  const kMoves = topCandidateMoves(moves, k);
   // Fix 4: Sort by heuristic for better alpha-beta pruning
   const orderedMoves = kMoves
     .map(m => ({ m, s: scoreMove(m.row, m.col) }))
@@ -166,15 +185,24 @@ function pickMinimax(moves, budgetMs = 300) {
     .map(x => x.m);
 
   let bestMove = orderedMoves[0];
-  let bestValue = -Infinity;
 
-  for (const m of orderedMoves) {
-    if (performance.now() > deadline) break;
-    const value = minimax(m.row, m.col, depth - 1, -Infinity, Infinity, false, deadline);
-    if (value > bestValue) {
-      bestValue = value;
-      bestMove = m;
+  // Iterative deepening: depth 1 for ALL candidates first, then deeper.
+  // Guarantees every candidate is compared at some depth before any deeper
+  // look — so a time-out never means a whole subset was ignored.
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    let bestValue = -Infinity;
+    let sawTimeout = false;
+
+    for (const m of orderedMoves) {
+      if (performance.now() > deadline) { sawTimeout = true; break; }
+      const value = minimax(m.row, m.col, depth - 1, -Infinity, Infinity, false, deadline);
+      if (value > bestValue) {
+        bestValue = value;
+        bestMove = m;
+      }
     }
+
+    if (sawTimeout) break; // keep best from last fully-completed depth
   }
 
   return bestMove;
@@ -182,25 +210,52 @@ function pickMinimax(moves, budgetMs = 300) {
 
 /**
  * Fix 2b: Return only the top-K moves by heuristic score.
+ * Root cause 3: Force-includes any tactically "hot" moves (would explode, or adjacent
+ * to a critical cell) even if they didn't make the score-ranked top-K.
  */
 function topCandidateMoves(moves, k = 10) {
   if (moves.length <= k) return moves;
-  return moves
-    .map(m => ({ m, s: scoreMove(m.row, m.col) }))
-    .sort((a, b) => b.s - a.s)
-    .slice(0, k)
-    .map(x => x.m);
+
+  const scored = moves.map(m => ({ m, s: scoreMove(m.row, m.col) }));
+  scored.sort((a, b) => b.s - a.s);
+
+  const isTacticallyHot = (m) => {
+    const cell = getCell(m.row, m.col);
+    const cap = getCapacity(m.row, m.col);
+    if (cell.count + 1 >= cap) return true; // this move would explode
+    return getNeighbors(m.row, m.col).some(([nr, nc]) => {
+      const n = getCell(nr, nc);
+      return n.owner !== null && n.count >= getCapacity(nr, nc) - 1;
+    });
+  };
+
+  const top = scored.slice(0, k).map(x => x.m);
+  const hot = scored.filter(x => isTacticallyHot(x.m)).map(x => x.m);
+  const merged = [...top];
+  // Cap extra hot-move adds to keep candidate count predictable
+  const maxExtra = Math.ceil(k * 0.5);
+  let added = 0;
+  for (const m of hot) {
+    if (added >= maxExtra) break;
+    if (!merged.some(x => x.row === m.row && x.col === m.col)) {
+      merged.push(m);
+      added++;
+    }
+  }
+  return merged;
 }
 
 /**
  * Fix 7: Adaptive depth based on board occupancy.
  * Reduces search depth when board is nearly full to keep turns fast.
+ * Enhancement 5: Increases search depth when board is nearly empty (opening phase)
+ * to better evaluate early-game tactics like corner buildups.
  */
-function getMinimaxDepth() {
+function getMinimaxDepth(occupancyRatio) {
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const base = isMobile ? 2 : 3;
-  const occupancyRatio = computeOccupancy(board);
   if (occupancyRatio > 0.75) return Math.max(1, base - 1);
+  if (occupancyRatio < 0.15) return base + (isMobile ? 1 : 2); // opening: search deeper
   return base;
 }
 
@@ -291,33 +346,51 @@ function collectOverflowingFrom(srcBoard) {
   return list;
 }
 
+/**
+ * Root cause 4: Weighted/clustered evaluate() — critical cells are weighted by capacity
+ * and cluster connectivity (number of same-owner near-critical neighbors).
+ * A lone critical corner is a small threat; three adjacent critical cells are a bomb.
+ */
 function evaluate(srcBoard) {
   const me = currentPlayerIndex;
   let myOrbs = 0;
   let enemyOrbs = 0;
-  let myCritical = 0;
-  let enemyCritical = 0;
+  let myCriticalWeighted = 0;
+  let enemyCriticalWeighted = 0;
 
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = srcBoard[r][c];
       const cap = getCapacity(r, c);
+      const isCritical = cell.count === cap - 1;
+      // Weight a critical cell by how many same-owner critical/near-critical
+      // neighbors it has — a lone critical corner is a small threat; three
+      // adjacent critical cells are a chain-reaction bomb.
+      let clusterBonus = 0;
+      if (isCritical && cell.owner !== null) {
+        clusterBonus = getNeighbors(r, c).filter(([nr, nc]) => {
+          const n = srcBoard[nr]?.[nc];
+          return n && n.owner === cell.owner && n.count >= getCapacity(nr, nc) - 2;
+        }).length;
+      }
+      const weight = 20 + cap * 5 + clusterBonus * 15;
+
       if (cell.owner === me) {
         myOrbs += cell.count;
-        if (cell.count === cap - 1) myCritical += 1;
+        if (isCritical) myCriticalWeighted += weight;
       } else if (cell.owner !== null) {
         enemyOrbs += cell.count;
-        if (cell.count === cap - 1) enemyCritical += 1;
+        if (isCritical) enemyCriticalWeighted += weight;
       }
     }
   }
 
-  const score = (myOrbs - enemyOrbs) + (myCritical * 30) - (enemyCritical * 30);
-  return score;
+  return (myOrbs - enemyOrbs) + myCriticalWeighted - enemyCriticalWeighted;
 }
 
 /**
  * Score a move from the perspective of playerId (used for ordering in minimax).
+ * Mirrors the same fixes as scoreMove() for consistency.
  */
 function scoreMoveFor(r, c, playerId) {
   const me = playerId;
@@ -325,27 +398,37 @@ function scoreMoveFor(r, c, playerId) {
   const cap = getCapacity(r, c);
   let score = 0;
 
-  if (cell.owner !== null && cell.owner !== me) score += 100;
   if (cell.owner === me) score += 20;
 
   const neighbors = getNeighbors(r, c);
+  const wouldExplode = (cell.count + 1) >= cap;
+  if (wouldExplode) {
+    score += 150;
+    const capturedNeighbors = neighbors.filter(([nr, nc]) => {
+      const n = getCell(nr, nc);
+      return n.owner !== null && n.owner !== me;
+    }).length;
+    score += capturedNeighbors * 60;
+  }
+
   for (const [nr, nc] of neighbors) {
     const n = getCell(nr, nc);
     const nCap = getCapacity(nr, nc);
-    if (n.owner !== null && n.owner !== me && n.count === nCap - 1) score += 80;
+    if (n.owner !== null && n.owner !== me && n.count === nCap - 1) score += wouldExplode ? 80 : 25;
     if (n.owner === me && n.count === nCap - 1) score += 40;
   }
 
   for (const [nr, nc] of neighbors) {
     const n = getCell(nr, nc);
-    if (n.owner !== null && n.owner !== me && n.count >= Math.max(2, Math.floor(getCapacity(nr, nc) / 2))) {
-      score -= 30;
+    const nCap = getCapacity(nr, nc);
+    if (n.owner !== null && n.owner !== me && n.count >= nCap - 1) {
+      score -= 30 + (4 - nCap) * 10;
     }
   }
 
   const centerR = Math.floor(ROWS / 2);
   const centerC = Math.floor(COLS / 2);
-  score -= (Math.abs(r - centerR) + Math.abs(c - centerC)) * 1;
+  score -= (Math.abs(r - centerR) + Math.abs(c - centerC)) * 0.15;
   score += Math.random() * 2;
   return score;
 }
@@ -476,7 +559,8 @@ function getWinnerFromBoard(srcBoard) {
       }
     }
   }
-  if (ownersPresent.size === 1) {
+  // Only declare a winner if all players have moved (same as checkWinCondition in rules.js)
+  if (ownersPresent.size === 1 && hasMoved.filter(Boolean).length >= numPlayers) {
     return [...ownersPresent][0];
   }
   return null;
