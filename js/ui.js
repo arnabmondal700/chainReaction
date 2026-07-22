@@ -11,10 +11,15 @@ import {
   setPlayerTypes, playerTypes, cpuDifficulty,
   isCpuTurn,
   markDirty,
+  recordMove, recordChainWave,
+  startGameTimer, getGameDurationMs,
+  persistBestAndReturnNew,
+  totalMoves, biggestChain,
 } from './state.js';
 import {
   collectOverflowing, explodeCell,
-  checkWinCondition, advanceTurn, canPlace,
+  checkWinCondition, setGameOverFromRules,
+  advanceTurn, canPlace,
 } from './rules.js';
 import {
   cacheDom, buildBoardDOM,
@@ -46,6 +51,19 @@ function sleep(ms) {
 function showGameOver(winner) {
   winnerText.textContent = `${winner.name} wins!`;
   winnerText.style.color = winner.color;
+
+  const durationMs = getGameDurationMs();
+  const stats = persistBestAndReturnNew(biggestChain, totalMoves, durationMs);
+
+  let statsHtml = `${totalMoves} moves, biggest chain: ${biggestChain}`;
+  if (stats.newBestChain) statsHtml += ' <span style="color:#ffd23f">★ New best chain!</span>';
+  if (stats.newBestMoves) statsHtml += ' <span style="color:#2fe0ff">★ Fewest moves!</span>';
+
+  const statsEl = document.getElementById('statsText');
+  if (statsEl) {
+    statsEl.innerHTML = statsHtml;
+  }
+
   gameOverOverlay.classList.remove('hidden');
   Sound.play('win');
 }
@@ -92,7 +110,9 @@ window.addEventListener('cpu-move', (e) => {
  */
 async function resolveExplosions() {
   let overflowing = collectOverflowing();
+  let cascadeTotal = 0;
   while (overflowing.length > 0) {
+    cascadeTotal += overflowing.length;
     overflowing.forEach(([r, c]) => {
       const color = players[board[r][c].owner].color;
       const affected = explodeCell(r, c);
@@ -100,12 +120,14 @@ async function resolveExplosions() {
       triggerShockwave(r, c, color);
       triggerJump(r, c);
     });
-    Sound.playExplosionBurst(overflowing.length);
+    Sound.playExplosionBurst(overflowing.length, cascadeTotal);
+    recordChainWave(overflowing.length);
     renderDirty();
     await sleep(WAVE_DELAY);
 
     const winnerId = checkWinCondition();
     if (winnerId !== null) {
+      setGameOverFromRules();
       gameOverOverlay && showGameOver(players[winnerId]);
       return;
     }
@@ -134,6 +156,7 @@ export async function handleCellClick(r, c, skipCpuCheck = false) {
   hasMoved[currentPlayerIndex] = true;
   clearOrbCountCache();
   markDirty(r, c);
+  recordMove();
   Sound.play('place');
   renderDirty();
 
@@ -172,6 +195,7 @@ export function initGame(n) {
 
   hideGameOver();
   renderAll();
+  startGameTimer();
 
   // Sync player-count buttons
   playerBtns.forEach(btn => {

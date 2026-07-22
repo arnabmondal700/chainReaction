@@ -38,6 +38,10 @@ body {
   position: relative;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 /* Ambient glow field */
@@ -249,7 +253,7 @@ button:focus-visible,
   grid-template-columns: repeat(var(--cols), 1fr);
   grid-template-rows: repeat(var(--rows), 1fr);
   gap: 6px;
-  width: min(88vw, 400px);
+  width: min(88vw, 400px, 53vh);
   aspect-ratio: var(--cols) / var(--rows);
   padding: 10px;
   border-radius: var(--radius-lg);
@@ -260,6 +264,10 @@ button:focus-visible,
 }
 
 /* ---- Cells ---- */
+.board, .cell {
+  touch-action: manipulation;
+}
+
 .cell {
   position: relative;
   border-radius: var(--radius-sm);

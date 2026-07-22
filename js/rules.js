@@ -7,6 +7,7 @@ import {
   board, players, numPlayers,
   currentPlayerIndex, hasMoved, gameOver,
   getCell, clearOrbCountCache, setCurrentPlayerIndex,
+  setGameOver,
 } from './state.js';
 
 /**
@@ -118,6 +119,14 @@ export function checkWinCondition() {
     return winnerId;
   }
   return null;
+}
+
+/**
+ * Set the game-over flag. Called from ui.js when checkWinCondition returns a winner.
+ * Broken out so rules.js doesn't import gameOver directly for mutation.
+ */
+export function setGameOverFromRules() {
+  setGameOver(true);
 }
 
 /**

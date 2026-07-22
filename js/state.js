@@ -13,6 +13,61 @@ export let hasMoved = [];
 export let gameOver = false;
 export let busy = false;
 
+// ---- Stats tracking ----
+export let totalMoves = 0;
+export let biggestChain = 0;
+let gameStartTime = 0;
+
+const STATS_KEY = 'chainReaction:stats:best';
+
+export function getStoredBestStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    return raw ? JSON.parse(raw) : { biggestChain: 0, totalMoves: 0, bestTimeMs: 0 };
+  } catch {
+    return { biggestChain: 0, totalMoves: 0, bestTimeMs: 0 };
+  }
+}
+
+function saveBestStats(stats) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch { /* ignore */ }
+}
+
+export function recordMove() {
+  totalMoves++;
+}
+
+export function recordChainWave(waveSize) {
+  if (waveSize > biggestChain) biggestChain = waveSize;
+}
+
+export function startGameTimer() {
+  gameStartTime = performance.now();
+}
+
+export function getGameDurationMs() {
+  return Math.round(performance.now() - gameStartTime);
+}
+
+export function persistBestAndReturnNew(latestBiggestChain, latestTotalMoves, latestDurationMs) {
+  const best = getStoredBestStats();
+  const updated = {
+    biggestChain: Math.max(best.biggestChain, latestBiggestChain),
+    totalMoves: best.totalMoves === 0 ? latestTotalMoves : Math.min(best.totalMoves, latestTotalMoves),
+    bestTimeMs: best.bestTimeMs === 0 ? latestDurationMs : Math.min(best.bestTimeMs, latestDurationMs),
+  };
+  saveBestStats(updated);
+  return {
+    newBestChain: latestBiggestChain > best.biggestChain,
+    newBestMoves: best.totalMoves === 0 || latestTotalMoves < best.totalMoves,
+    newBestTime: best.bestTimeMs === 0 || latestDurationMs < best.bestTimeMs,
+    best,
+    latest: { biggestChain: latestBiggestChain, totalMoves: latestTotalMoves, durationMs: latestDurationMs },
+  };
+}
+
 // CPU vs Player
 export let playerTypes = [];
 export let cpuDifficulty = 'medium';
@@ -70,6 +125,8 @@ export function initGameState(n) {
   busy = false;
   orbCountCache = {};
   dirtyCells = new Set();
+  totalMoves = 0;
+  biggestChain = 0;
 }
 
 /**
@@ -84,6 +141,8 @@ export function resetBoardState() {
   busy = false;
   orbCountCache = {};
   dirtyCells = new Set();
+  totalMoves = 0;
+  biggestChain = 0;
 }
 
 /**

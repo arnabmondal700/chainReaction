@@ -49,6 +49,15 @@ function ensureContext() {
   return audioCtx;
 }
 
+// iOS suspends the AudioContext when the app is backgrounded/interrupted and
+// won't auto-resume it — only a fresh user gesture can. visibilitychange is
+// NOT sufficient (WebKit blocks playback until a direct interaction occurs).
+document.addEventListener('touchend', () => {
+  if (audioCtx && audioCtx.state !== 'running') {
+    audioCtx.resume().catch(() => {});
+  }
+});
+
 function loadArrayBuffer(url) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -156,11 +165,18 @@ export function toggleMute() {
 
 const MAX_LAYERED_EXPLOSIONS = 6;
 
-export function playExplosionBurst(count) {
-  const layers = Math.min(count, MAX_LAYERED_EXPLOSIONS);
+/**
+ * Play layered explosion sounds for a cascade wave.
+ * @param {number} waveCount — number of cells exploding in this wave
+ * @param {number} [cascadeTotal=0] — cumulative cells exploded across the full cascade
+ */
+export function playExplosionBurst(waveCount, cascadeTotal = 0) {
+  const layers = Math.min(waveCount, MAX_LAYERED_EXPLOSIONS);
+  const intensity = Math.min(1, cascadeTotal / 12);
   for (let i = 0; i < layers; i++) {
-    const jitter = 0.92 + Math.random() * 0.16;
-    const falloff = 1 - i * 0.12;
-    play('explode', { rate: jitter, volume: Math.max(0.35, falloff) });
+    const jitter = 0.88 + Math.random() * 0.2 + intensity * 0.15;
+    const falloff = 1 - i * 0.10;
+    const volBoost = 1 + intensity * 0.3;
+    play('explode', { rate: jitter, volume: Math.max(0.3, Math.min(1, falloff * volBoost)) });
   }
 }
