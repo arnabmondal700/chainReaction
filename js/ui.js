@@ -124,15 +124,13 @@ async function resolveExplosions() {
     recordChainWave(overflowing.length);
     renderDirty();
     await sleep(WAVE_DELAY);
-
-    const winnerId = checkWinCondition();
-    if (winnerId !== null) {
-      setGameOverFromRules();
-      gameOverOverlay && showGameOver(players[winnerId]);
-      return;
-    }
-
     overflowing = collectOverflowing();
+  }
+
+  const winnerId = checkWinCondition();
+  if (winnerId !== null) {
+    setGameOverFromRules();
+    gameOverOverlay && showGameOver(players[winnerId]);
   }
 }
 

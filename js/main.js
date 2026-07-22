@@ -2,9 +2,9 @@
 
 'use strict';
 
-import { initGameState, setPlayerTypes, setCpuDifficulty } from './state.js';
+import { initGameState, setPlayerTypes, setCpuDifficulty, numPlayers } from './state.js';
 import { buildBoardDOM, renderAll } from './render.js';
-import { initUI } from './ui.js';
+import { initUI, initGame } from './ui.js';
 import * as Sound from './sound.js';
 
 Sound.preload();

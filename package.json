@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.js",
     "build:min": "node build.js --minify",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/**/*.test.js"
   },
   "keywords": [],
   "author": "",
