@@ -6,7 +6,10 @@
   "scripts": {
     "build": "node build.js",
     "build:min": "node build.js --minify",
-    "test": "node --test tests/**/*.test.js"
+    "test": "node --test tests/**/*.test.js",
+    "test:tutorial": "node tests/tutorial.smoke.mjs",
+    "test:dist": "npm run build:min && node tests/dist-build.smoke.mjs",
+    "verify": "npm test && npm run test:tutorial && npm run test:dist"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +17,7 @@
   "devDependencies": {
     "clean-css": "^5.3.3",
     "html-minifier-terser": "^7.2.0",
+    "jsdom": "^29.1.1",
     "terser": "^5.49.0"
   }
 }

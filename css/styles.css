@@ -575,6 +575,91 @@ button:focus-visible,
   cursor: pointer;
 }
 
+/* ---- Tutorial ---- */
+body.tutorial-active .topbar,
+body.tutorial-active .side-rail {
+  pointer-events: none;
+}
+
+.tutorial-highlight {
+  position: relative;
+  z-index: 2;
+}
+.tutorial-highlight::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--p3);
+  box-shadow: 0 0 14px 2px rgba(255, 210, 63, 0.55);
+  animation: tutorialPulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes tutorialPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+.tutorial-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px;
+  background: var(--bg-panel-strong);
+  border-top: 1px solid var(--border-glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -12px 40px -12px rgba(0,0,0,0.6);
+}
+.tutorial-bar.hidden { display: none; }
+
+.tutorial-dots {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.tutorial-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border-glass);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.tutorial-dot.active {
+  background: var(--p3);
+  transform: scale(1.3);
+}
+
+.tutorial-caption {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.tutorial-caption strong {
+  color: var(--p3);
+}
+
+.tutorial-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.tutorial-link {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tutorial-link:hover { color: var(--text-primary); }
+
 /* ---- Responsive ---- */
 @media (max-width: 760px) {
   .stage {
@@ -588,6 +673,16 @@ button:focus-visible,
     justify-content: center;
     text-align: center;
   }
+  .tutorial-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .tutorial-actions {
+    justify-content: center;
+  }
 }
 
 /* ---- Reduced Motion ---- */
@@ -600,5 +695,9 @@ button:focus-visible,
   }
   .cell.exploding::after {
     animation-duration: 0.01s;
+  }
+  .tutorial-highlight::before {
+    animation: none !important;
+    opacity: 1;
   }
 }

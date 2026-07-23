@@ -16,7 +16,7 @@ initUI();
 const gameModeEl = document.getElementById('gameMode');
 const cpuDiffEl = document.getElementById('cpuDifficulty');
 
-let selectedMode = 'pvp';
+let selectedMode = 'cpu';
 if (gameModeEl) {
   selectedMode = gameModeEl.value;
   gameModeEl.addEventListener('change', () => {

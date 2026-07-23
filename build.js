@@ -29,6 +29,7 @@ const JS_MODULES = [
   'rules.js',
   'render.js',
   'sound.js',
+  'tutorial.js',
   'ui.js',
   'cpu.js',
   'main.js',

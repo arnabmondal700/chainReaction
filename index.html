@@ -23,8 +23,8 @@
     </div>
     <div class="mode-select" role="group" aria-label="Game mode">
       <select id="gameMode">
+        <option value="cpu" selected>Player vs CPU</option>
         <option value="pvp">Player vs Player</option>
-        <option value="cpu">Player vs CPU</option>
       </select>
       <select id="cpuDifficulty">
         <option value="easy">Easy</option>
@@ -88,5 +88,16 @@
 </div>
 
 <script type="module" src="js/main.js"></script>
+
+<div class="tutorial-bar hidden" id="tutorialBar" role="region" aria-label="Interactive tutorial">
+  <div class="tutorial-dots" id="tutorialDots"></div>
+  <p class="tutorial-caption" id="tutorialCaption"></p>
+  <div class="tutorial-actions">
+    <a href="#" class="tutorial-link" id="tutorialReadRulesLink">Read the rules instead</a>
+    <button class="ghost-btn" id="tutorialSkipBtn">Skip</button>
+    <button class="primary-btn" id="tutorialNextBtn">Next</button>
+  </div>
+</div>
+
 </body>
 </html>

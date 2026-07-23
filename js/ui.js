@@ -30,6 +30,7 @@ import {
   setThinking,
 } from './render.js';
 import { executeCpuMove } from './cpu.js';
+import { startTutorial } from './tutorial.js';
 import * as Sound from './sound.js';
 
 // ---- DOM refs (populated by initUI) ----
@@ -127,6 +128,8 @@ async function resolveExplosions() {
     overflowing = collectOverflowing();
   }
 
+  // Only decide a winner once the ENTIRE chain reaction has settled,
+  // and unconditionally — even if this move never triggered a cascade.
   const winnerId = checkWinCondition();
   if (winnerId !== null) {
     setGameOverFromRules();
@@ -267,11 +270,13 @@ export function initUI() {
     initGame(numPlayers);
   });
 
-  // How to play overlay
+  // How to play — interactive demo instead of a static modal
   howToPlayBtn.addEventListener('click', () => {
     Sound.unlock();
     Sound.play('click');
-    rulesOverlay.classList.remove('hidden');
+    clearTimeout(cpuTimer);
+    setThinking(false);
+    startTutorial({ onFinish: () => initGame(numPlayers) });
   });
   closeRulesBtn.addEventListener('click', () => {
     Sound.unlock();
