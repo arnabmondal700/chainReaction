@@ -298,7 +298,8 @@ button:focus-visible,
     box-shadow: inset 0 0 0 1px var(--border-glass);
   }
   50% {
-    box-shadow: inset 0 0 0 1px var(--border-glass), 0 0 10px 1px rgba(255,255,255,0.25);
+    box-shadow: inset 0 0 0 1px var(--owner-color, #fff),
+                0 0 12px 2px var(--owner-color, rgba(255,255,255,0.3));
   }
 }
 
@@ -311,22 +312,77 @@ button:focus-visible,
   100% { transform: translateY(0); }
 }
 
-.cell.exploding::after {
+/* Exploding cell: a bright flash + two staggered rings. Bigger cascades
+   (.big) scale up via --blast-scale/--blast-glow, set from JS — same
+   "make big chains feel big" signal already driving the explosion sound. */
+.cell.exploding {
+  animation: blastFlash .32s ease-out;
+}
+@keyframes blastFlash {
+  0% {
+    box-shadow: inset 0 0 0 1px var(--explosion-color, #fff),
+                0 0 var(--blast-glow, 22px) 4px var(--explosion-color, rgba(255,255,255,0.6));
+  }
+  100% {
+    box-shadow: inset 0 0 0 1px var(--border-glass), 0 0 0 0 transparent;
+  }
+}
+.cell.exploding::after,
+.cell.exploding::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 50%;
+  pointer-events: none;
+}
+.cell.exploding::after {
   border: 2px solid var(--explosion-color, #fff);
   transform: scale(0.2);
   opacity: 1;
-  animation: shockwave .5s ease-out forwards;
+  animation: shockwaveInner .42s ease-out forwards;
+}
+.cell.exploding::before {
+  border: 1.5px solid var(--explosion-color, #fff);
+  transform: scale(0.2);
+  opacity: 0.6;
+  animation: shockwaveOuter .55s ease-out .05s forwards;
+}
+@keyframes shockwaveInner {
+  to { transform: scale(calc(2.1 * var(--blast-scale, 1))); opacity: 0; }
+}
+@keyframes shockwaveOuter {
+  to { transform: scale(calc(3 * var(--blast-scale, 1))); opacity: 0; }
+}
+/* Big-cascade cells also get a very brief, tasteful shudder — small
+   enough not to feel gimmicky, and only for cascades that earn it. */
+.cell.exploding.big {
+  animation: blastFlash .32s ease-out, blastShudder .18s ease-in-out;
+}
+@keyframes blastShudder {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1.5px, 1px); }
+  50% { transform: translate(1.5px, -1px); }
+  75% { transform: translate(-1px, -1px); }
+}
+
+/* Impact flash: a lighter, quicker pulse on a cell that just RECEIVED an
+   orb from a neighbor's explosion — gives the capture a visible cause,
+   distinct from the exploding cell's own bigger shockwave. Lives on the
+   .orbs pseudo-element so it can never collide with the .exploding rings
+   above, even if a cell is captured and re-explodes moments later. */
+.cell.impact .orbs::before {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--impact-color, #fff) 0%, transparent 70%);
+  opacity: 0.75;
+  transform: scale(0.4);
+  animation: impactPulse .2s ease-out forwards;
   pointer-events: none;
 }
-@keyframes shockwave {
-  to {
-    transform: scale(2.3);
-    opacity: 0;
-  }
+@keyframes impactPulse {
+  to { transform: scale(1.3); opacity: 0; }
 }
 
 /* ---- Orbs ---- */
@@ -343,7 +399,7 @@ button:focus-visible,
   border-radius: 50%;
   background: currentColor;
   box-shadow: 0 0 9px 1.5px currentColor, 0 0 2px currentColor;
-  animation: orbPop .22s cubic-bezier(.34,1.56,.64,1);
+  animation: orbPop .28s cubic-bezier(.34, 1.56, .64, 1);
 }
 .orbs.count-1 .orb { width: 48%; }
 .orbs.count-2 .orb { width: 44%; }
@@ -363,8 +419,9 @@ button:focus-visible,
 .orbs.count-4 .orb:nth-child(4) { grid-column: 2; grid-row: 2; }
 
 @keyframes orbPop {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
+  0%   { transform: scale(0); }
+  65%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
 }
 
 /* ---- Side Rail ---- */
@@ -693,8 +750,15 @@ body.tutorial-active .side-rail {
   .brand-mark {
     animation: none !important;
   }
-  .cell.exploding::after {
-    animation-duration: 0.01s;
+  .cell.exploding,
+  .cell.exploding::after,
+  .cell.exploding::before,
+  .cell.exploding.big {
+    animation-duration: 0.01s !important;
+  }
+  .cell.impact .orbs::before {
+    animation: none !important;
+    opacity: 0 !important;
   }
   .tutorial-highlight::before {
     animation: none !important;

@@ -15,7 +15,7 @@ import {
   markDirty, setBusy,
 } from './state.js';
 import { collectOverflowing, explodeCell } from './rules.js';
-import { renderDirty, triggerShockwave, triggerJump } from './render.js';
+import { renderDirty, triggerShockwave, triggerJump, triggerImpact } from './render.js';
 import * as Sound from './sound.js';
 
 const CAPTION_BEAT_DELAY = 900; // pause between narrated beats within a step
@@ -92,8 +92,9 @@ async function resolveDemoCascade(onWave) {
       const color = players[board[r][c].owner].color;
       const affected = explodeCell(r, c);
       affected.forEach(([ar, ac]) => markDirty(ar, ac));
-      triggerShockwave(r, c, color);
+      triggerShockwave(r, c, color, cascadeTotal);
       triggerJump(r, c);
+      affected.slice(1).forEach(([ar, ac]) => triggerImpact(ar, ac, color));
     });
     Sound.playExplosionBurst(overflowing.length, cascadeTotal);
     renderDirty();

@@ -27,6 +27,7 @@ import {
   renderDirty,
   triggerShockwave,
   triggerJump,
+  triggerImpact,
   setThinking,
 } from './render.js';
 import { executeCpuMove } from './cpu.js';
@@ -118,8 +119,12 @@ async function resolveExplosions() {
       const color = players[board[r][c].owner].color;
       const affected = explodeCell(r, c);
       affected.forEach(([ar, ac]) => markDirty(ar, ac));
-      triggerShockwave(r, c, color);
+      triggerShockwave(r, c, color, cascadeTotal);
       triggerJump(r, c);
+      // affected[0] is the exploding cell itself; the rest just received
+      // an orb from it — give them a lighter "impact" flash so the
+      // capture reads as cause-and-effect, not just a silent orb pop.
+      affected.slice(1).forEach(([ar, ac]) => triggerImpact(ar, ac, color));
     });
     Sound.playExplosionBurst(overflowing.length, cascadeTotal);
     recordChainWave(overflowing.length);

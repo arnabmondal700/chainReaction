@@ -58,18 +58,45 @@ export function buildBoardDOM() {
   }
 }
 
+const BIG_CASCADE_THRESHOLD = 6; // total cells exploded so far this cascade
+
 /**
- * Trigger a shockwave animation on a cell.
+ * Trigger a shockwave animation on an exploding cell. `cascadeTotal` (the
+ * running total of cells exploded so far in this cascade, if known) lets
+ * bigger chain reactions get a visibly bigger blast — same signal already
+ * used to scale the explosion sound.
  */
-export function triggerShockwave(r, c, color) {
+export function triggerShockwave(r, c, color, cascadeTotal = 1) {
   const el = cellEls[r][c];
   if (!el) return;
+  const isBig = cascadeTotal >= BIG_CASCADE_THRESHOLD;
   el.style.setProperty('--explosion-color', color);
-  el.classList.remove(CLASSES.exploding);
+  el.style.setProperty('--blast-scale', isBig ? '1.4' : '1');
+  el.style.setProperty('--blast-glow', isBig ? '34px' : '22px');
+  el.classList.remove(CLASSES.exploding, 'big');
   void el.offsetWidth; // force reflow to restart animation
   el.classList.add(CLASSES.exploding);
+  el.classList.toggle('big', isBig);
   el.addEventListener('animationend', () => {
-    el.classList.remove(CLASSES.exploding);
+    el.classList.remove(CLASSES.exploding, 'big');
+  }, { once: true });
+}
+
+/**
+ * Trigger a brief "impact" flash on a cell that just received an orb from
+ * a neighboring explosion (distinct, lighter effect from the shockwave
+ * the exploding cell itself gets) — gives the capture a visible cause and
+ * effect instead of the orb just silently popping in.
+ */
+export function triggerImpact(r, c, color) {
+  const el = cellEls[r][c];
+  if (!el) return;
+  el.style.setProperty('--impact-color', color);
+  el.classList.remove('impact');
+  void el.offsetWidth;
+  el.classList.add('impact');
+  el.addEventListener('animationend', () => {
+    el.classList.remove('impact');
   }, { once: true });
 }
 
@@ -113,6 +140,9 @@ export function renderCell(r, c) {
     orbsEl.appendChild(orb);
   }
 
+  if (color) {
+    cellEl.style.setProperty('--owner-color', color);
+  }
   cellEl.style.boxShadow = color
     ? `inset 0 0 0 1px ${color}66`
     : '';
